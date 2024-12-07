@@ -22,16 +22,10 @@ class ConvNetwork(nn.Module):
     def __init__(self):
         super(ConvNetwork, self).__init__()
 
-        self.layer1 = Block(1, 32, downsample=True)
-        self.layer2 = Block(32, 64, downsample=True)
-        self.layer3 = Block(64, 128, downsample=True)
-        self.layer4 = Block(128, 256, downsample=False)
-
-        self.last_layer = nn.Sequential(
-            nn.Conv3d(256, 1, kernel_size=[1, 1, 1], stride=[1, 1, 1]),
-            nn.BatchNorm3d(1),
-            nn.ReLU(inplace=True)
-        )
+        self.layer1 = Block(1, 4, downsample=True)
+        self.layer2 = Block(4, 8, downsample=True)
+        self.layer3 = Block(8, 16, downsample=True)
+        self.layer4 = Block(16, 1, downsample=False)
     
     def forward(self, x):
         # print(x.shape)
@@ -42,9 +36,6 @@ class ConvNetwork(nn.Module):
         x = self.layer3(x)
         # print(x.shape)
         x = self.layer4(x)
-        # print(x.shape)
-
-        x = self.last_layer(x)
         # print(x.shape)
 
         return x
