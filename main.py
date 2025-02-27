@@ -6,7 +6,7 @@ import nibabel as nib
 from septr.septr import SeparableTr
 from conv_network_3d.conv_net import ConvNetwork
 
-DEVICE = "cuda"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 INPUT_SIZE = (6, 64)
 CHANNELS = 140
@@ -25,6 +25,7 @@ class Model(nn.Module):
         )
 
     def forward(self, x):
+        #TODO: Permute input such that timestamps are on dim=1
         downsampled_volumes = []
         for id in range(x.shape[-1]):
             volume_in = torch.unsqueeze(x[:, :, :, :, id], dim=1)
