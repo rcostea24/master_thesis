@@ -1,48 +1,57 @@
+import argparse
+import json
+import os
 import torch
 import numpy as np
 import torch.nn as nn
 import nibabel as nib
 
+from dataloading.dataset import NiftiDataset, load_data
+from torch.utils.data import DataLoader
+from model import Model
 from septr.septr import SeparableTr
 from conv_network_3d.conv_net import ConvNetwork
+from training.logger import Logger
+from training.trainer import Trainer
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
 INPUT_SIZE = (6, 64)
 CHANNELS = 140
 NUM_CLASSES = 6
 BATCH_SIZE = 32
 
-class Model(nn.Module):
-    def __init__(self):
-        super(Model, self).__init__()
+TARGET_SPACE_DIM = [64, 64, 48]
+TARGET_TIME_DIM = 140
 
-        self.conv_network = ConvNetwork()
-        self.transformer = SeparableTr(
-            channels=CHANNELS,
-            input_size=INPUT_SIZE,
-            num_classes=NUM_CLASSES
-        )
-
-    def forward(self, x):
-        #TODO: Permute input such that timestamps are on dim=1
-        downsampled_volumes = []
-        for id in range(x.shape[-1]):
-            volume_in = torch.unsqueeze(x[:, :, :, :, id], dim=1)
-            volume_out = torch.squeeze(self.conv_network(volume_in), dim=1)
-
-            b, d1, d2, d3 = volume_out.shape
-            volume_out = torch.reshape(volume_out, [b, d1, d2*d3])
-
-            downsampled_volumes.append(volume_out)
-
-        downsampled_volumes = torch.stack(downsampled_volumes, dim=1)
-        out = self.transformer(downsampled_volumes)
-        return out
+EXPERIMENTS_ROOT = r"experiments"
 
 if __name__ == "__main__":
-    model = Model().to(DEVICE)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_root_path", default="/kaggle/input/image-sentence-pair-v2")
+    args = parser.parse_args()
 
-    x = torch.rand([BATCH_SIZE, 48, 64, 64, 140]).to(DEVICE)
-    y = model(x)
-    print(torch.cuda.memory_allocated() * 10**(-6))
+    exp_cfgs = sorted(os.listdir(EXPERIMENTS_ROOT))
+    print(exp_cfgs)
+    for cfg_file_name in exp_cfgs:
+        cfg_path = os.path.join(EXPERIMENTS_ROOT, cfg_file_name)
+    
+        with open(cfg_path, "r") as file:
+            cfg = json.load(file)
+
+        train_dataloader, val_dataloader = load_data(cfg)
+
+        if not os.path.exists("logs"):
+            os.makedirs("logs")
+
+        logger = Logger(f"logs/log_{cfg['exp_id']}.txt")
+
+        logger.log(f"{'-'*50} Parameters {'-'*50}")
+        for key, value in cfg.items():
+            logger.log(f"{key}: {value}")
+        logger.log(f"{'-'*50}------------{'-'*50}")
+
+        trainer = Trainer(cfg, logger, train_dataloader, val_dataloader)
+
+        trainer.train()
+
+        trainer.test_step()

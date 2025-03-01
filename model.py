@@ -1,5 +1,5 @@
 import torch
-
+from torch import nn
 from septr.septr import SeparableTr
 from conv_network_3d.conv_net import ConvNetwork
 
@@ -15,6 +15,7 @@ class Model(nn.Module):
         )
 
     def forward(self, x):
+        #TODO: Permute input such that timestamps are on dim=1
         downsampled_volumes = []
         for id in range(x.shape[-1]):
             volume_in = torch.unsqueeze(x[:, :, :, :, id], dim=1)
