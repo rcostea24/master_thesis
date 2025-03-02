@@ -1,33 +1,16 @@
-import argparse
 import json
 import os
-import torch
-import numpy as np
-import torch.nn as nn
-import nibabel as nib
+import argparse
 
-from dataloading.dataset import NiftiDataset, load_data
-from torch.utils.data import DataLoader
-from model import Model
-from septr.septr import SeparableTr
-from conv_network_3d.conv_net import ConvNetwork
+from dataloading.dataset import load_data
 from training.logger import Logger
 from training.trainer import Trainer
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-INPUT_SIZE = (6, 64)
-CHANNELS = 140
-NUM_CLASSES = 6
-BATCH_SIZE = 32
-
-TARGET_SPACE_DIM = [64, 64, 48]
-TARGET_TIME_DIM = 140
 
 EXPERIMENTS_ROOT = r"experiments"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_root_path", default="/kaggle/input/image-sentence-pair-v2")
+    parser.add_argument("--data_root_path", default=r"C:\Users\razva\Master1\Thesis")
     args = parser.parse_args()
 
     exp_cfgs = sorted(os.listdir(EXPERIMENTS_ROOT))
@@ -38,7 +21,7 @@ if __name__ == "__main__":
         with open(cfg_path, "r") as file:
             cfg = json.load(file)
 
-        train_dataloader, val_dataloader = load_data(cfg)
+        train_dataloader, val_dataloader = load_data(cfg, args.data_root_path)
 
         if not os.path.exists("logs"):
             os.makedirs("logs")
@@ -53,5 +36,3 @@ if __name__ == "__main__":
         trainer = Trainer(cfg, logger, train_dataloader, val_dataloader)
 
         trainer.train()
-
-        trainer.test_step()

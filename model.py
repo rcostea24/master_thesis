@@ -1,7 +1,7 @@
 import torch
 from torch import nn
-from septr.septr import SeparableTr
 from conv_network_3d.conv_net import ConvNetwork
+from septr.septr import SeparableTr
 
 class Model(nn.Module):
     def __init__(self, septr_channels, septr_input_size, num_classes):
@@ -29,3 +29,9 @@ class Model(nn.Module):
         downsampled_volumes = torch.stack(downsampled_volumes, dim=1)
         out = self.transformer(downsampled_volumes)
         return out
+    
+if __name__ == "__main__":
+    x = torch.rand([32, 64, 64, 48, 140]).to("cuda")
+    model = Model(140, (8, 48), 6).to("cuda")
+    y = model(x)
+    print(y.shape)

@@ -7,8 +7,18 @@ import scipy.ndimage
 import torch
 from torchvision import transforms as T
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
-def load_data(cfg):
+LABELS_MAPPING = {
+    'CN': 0,
+    'SMC': 1,
+    'MCI': 2,
+    'LMCI': 3,
+    'EMCI': 4,
+    'AD': 5,
+}
+
+def load_data(cfg, data_root_path):
     cfg_transforms = []
     for transform_name in cfg["transforms"]:
         cfg_transforms.append(getattr(T, transform_name)())
@@ -16,6 +26,7 @@ def load_data(cfg):
     transforms = T.Compose(cfg_transforms)
 
     train_dataset = NiftiDataset(
+        data_root_path,
         cfg["train_csv_file"],
         cfg["space_dim"],
         cfg["time_dim"],
@@ -23,6 +34,7 @@ def load_data(cfg):
     )
 
     val_dataset = NiftiDataset(
+        data_root_path,
         cfg["val_csv_file"],                 
         cfg["space_dim"],
         cfg["time_dim"],
@@ -35,10 +47,11 @@ def load_data(cfg):
     return train_dataloader, val_dataloader
 
 class NiftiDataset(Dataset):
-    def __init__(self, csv_file, space_dim, time_dim, transforms):
-        csv_data = pd.read_csv(csv_file)
+    def __init__(self, data_root_path, csv_file, space_dim, time_dim, transforms):
+        csv_data = pd.read_csv(os.path.join(data_root_path, csv_file))
         csv_data = csv_data.fillna("")
         csv_data = csv_data[csv_data["File Path"] != ""]
+        csv_data = csv_data[csv_data["Group"] != "Patient"]
 
         self.data = {"scans": [], "labels": []}
         self.other_data = {
@@ -47,9 +60,11 @@ class NiftiDataset(Dataset):
         }
         self.transforms = transforms
 
-        image_label_pairs = zip(csv_data["File Path"].to_list(), csv_data["Group"].to_list())
-        for nifti_file, label in image_label_pairs:
-            nib_obj = nib.load(nifti_file)
+        image_label_pairs = list(zip(csv_data["File Path"].to_list(), csv_data["Group"].to_list()))
+        split = "train" if "train" in csv_file else "val"
+        desc = f"Load {split} data"
+        for nifti_file, label in tqdm(image_label_pairs, total=len(image_label_pairs), desc=desc):
+            nib_obj = nib.load(os.path.join(data_root_path, nifti_file))
             img = nib_obj.get_fdata()
 
             if len(img.shape) < 4:
@@ -68,6 +83,8 @@ class NiftiDataset(Dataset):
 
             img = scipy.ndimage.zoom(img, zoom_factor)
             self.data["scans"].append(img)
+
+            label = LABELS_MAPPING[label]
             self.data["labels"].append(label)
 
     def __len__(self):

@@ -27,7 +27,11 @@ class Trainer():
 
     def train(self):
 
-        self.model = Model()
+        self.model = Model(
+            self.cfg["time_dim"],
+            self.cfg["input_size"],
+            self.cfg["num_classes"]
+        )
         
         optimizer_obj = getattr(torch.optim, self.cfg["optimizer"])
         self.optimizer = optimizer_obj(self.model.parameters(), lr=self.cfg["lr"])
