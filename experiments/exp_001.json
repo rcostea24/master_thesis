@@ -2,7 +2,7 @@
     "exp_id": "001",
     "device": "cuda",
     "input_size": [8, 48],
-    "NUM_CLASSES": 6,
+    "num_classes": 6,
     "batch_size": 32,
     "lr": 1e-3,
     "epochs": 50,
