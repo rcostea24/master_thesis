@@ -9,21 +9,22 @@ from torchvision import transforms as T
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
-def load_data(cfg):
+def load_data(cfg, data_root_path):
     cfg_transforms = []
     for transform_name in cfg["transforms"]:
         cfg_transforms.append(getattr(T, transform_name)())
 
     transforms = T.Compose(cfg_transforms)
-
+    data_path = os.path.join(data_root_path, cfg["data_path"])
+    
     train_dataset = NiftiDataset(
-        cfg["data_path"],
+        data_path,
         "train",
         transforms
     )
 
     val_dataset = NiftiDataset(
-        cfg["data_path"],
+        data_path,
         "val",                 
         transforms
     )
@@ -39,11 +40,13 @@ class NiftiDataset(Dataset):
 
         self.data = {"scans": [], "labels": []}
         self.transforms = transforms
-
-        image_label_pairs = list(zip(csv_data["img_path"].to_list(), csv_data["label"].to_list()))
+        
+        image_paths = csv_data["img_path"].to_list()[:500]
+        labels = csv_data["label"].to_list()[:500]
+        image_label_pairs = list(zip(image_paths, labels))
         desc = f"Load {split} data"
         for nifti_file, label in tqdm(image_label_pairs, total=len(image_label_pairs), desc=desc):
-            nifit_img_name = nifti_file.split(os.sep)[-1]
+            nifit_img_name = nifti_file.split("\\")[-1]
             nib_obj = nib.load(os.path.join(data_path, f"{split}_img", nifit_img_name))
             img = nib_obj.get_fdata()
             self.data["scans"].append(img)

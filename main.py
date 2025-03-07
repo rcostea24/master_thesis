@@ -10,7 +10,7 @@ EXPERIMENTS_ROOT = r"experiments"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_root_path", default=r"C:\Users\razva\Master1\Thesis")
+    parser.add_argument("--data_root_path", default="/home/razvan")
     args = parser.parse_args()
 
     exp_cfgs = sorted(os.listdir(EXPERIMENTS_ROOT))
@@ -21,7 +21,7 @@ if __name__ == "__main__":
         with open(cfg_path, "r") as file:
             cfg = json.load(file)
 
-        train_dataloader, val_dataloader = load_data(cfg)
+        train_dataloader, val_dataloader = load_data(cfg, args.data_root_path)
 
         if not os.path.exists("logs"):
             os.makedirs("logs")
