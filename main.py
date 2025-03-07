@@ -21,7 +21,7 @@ if __name__ == "__main__":
         with open(cfg_path, "r") as file:
             cfg = json.load(file)
 
-        train_dataloader, val_dataloader = load_data(cfg, args.data_root_path)
+        train_dataloader, val_dataloader = load_data(cfg)
 
         if not os.path.exists("logs"):
             os.makedirs("logs")

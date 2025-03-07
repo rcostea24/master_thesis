@@ -1,6 +1,7 @@
 {
     "exp_id": "001",
     "device": "cuda",
+    "data_path": "C:\\Users\\razva\\Master1\\Thesis\\data\\adni_preprocessed",
     "input_size": [8, 48],
     "num_classes": 6,
     "batch_size": 32,
@@ -8,10 +9,6 @@
     "epochs": 50,
     "optimizer": "Adam",
     "loss_fn": "CrossEntropyLoss",
-    "train_csv_file": "train_data.csv",
-    "val_csv_file": "val_data.csv",
-    "space_dim": [64, 64, 48],
-    "time_dim": 140,
     "transforms": [
         "ToTensor"
     ]
