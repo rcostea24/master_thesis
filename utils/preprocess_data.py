@@ -11,12 +11,12 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
 LABELS_MAPPING = {
-    'CN': 0,
-    'SMC': 1,
-    'MCI': 2,
-    'LMCI': 3,
-    'EMCI': 4,
-    'AD': 5,
+    'CN': 0, # Cognitively Normal
+    'SMC': 1, # Significant Memory Concern
+    'MCI': 2, # Mild Cognitive Impairment
+    'LMCI': 3, # Late Mild Cognitive Impairment 
+    'EMCI': 4, # Early Mild Cognitive Impairment
+    'AD': 5, # Alzheimer's Dementia
 }
 
 data_root_path = r"C:\Users\razva\Master1\Thesis"

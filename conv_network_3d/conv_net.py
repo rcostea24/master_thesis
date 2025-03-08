@@ -24,7 +24,7 @@ class ConvNetwork(nn.Module):
 
         self.layer1 = Block(1, 4, downsample=True)
         self.layer2 = Block(4, 8, downsample=True)
-        self.layer3 = Block(8, 16, downsample=True)
+        self.layer3 = Block(8, 16, downsample=False)
         self.layer4 = Block(16, 1, downsample=False)
     
     def forward(self, x):
@@ -40,6 +40,6 @@ if __name__ == "__main__":
 
     model = ConvNetwork().to(DEVICE)
 
-    x = torch.rand([1, 1, 48, 64, 64]).to(DEVICE)
+    x = torch.rand([1, 1, 32, 32, 24]).to(DEVICE)
     y = model(x)
-    print(torch.cuda.memory_allocated() * 10**(-6))
+    print(y.shape)

@@ -4,17 +4,16 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from model import Model
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
 class Trainer():
-    def __init__(self, cfg, logger, train_loader, val_loader, test_loader):
+    def __init__(self, cfg, logger, train_loader, val_loader):
         self.cfg = cfg
         self.logger = logger
         self.train_loader = train_loader
-        self.test_loader = test_loader
         self.val_loader = val_loader
 
         self.model = None
@@ -28,10 +27,10 @@ class Trainer():
     def train(self):
 
         self.model = Model(
-            self.cfg["time_dim"],
-            self.cfg["input_size"],
-            self.cfg["num_classes"]
-        )
+            self.cfg["septr_channels"],
+            self.cfg["septr_input_size"],
+            self.cfg["septr_num_classes"]
+        ).to(self.cfg["device"])
         
         optimizer_obj = getattr(torch.optim, self.cfg["optimizer"])
         self.optimizer = optimizer_obj(self.model.parameters(), lr=self.cfg["lr"])
@@ -77,17 +76,14 @@ class Trainer():
             self.optimizer.zero_grad()
             
             outputs = self.model(images)
-
+            
             loss = self.loss_fn(outputs, labels)
-
             loss.backward()
+            total_loss += loss.item()
 
             self.optimizer.step()
 
-            total_loss += loss.item()
-            
             predictions = torch.argmax(outputs, dim=1)
-
             correct_preds += torch.sum(predictions == labels).item()
             total_preds += labels.shape[0]
 
@@ -109,11 +105,9 @@ class Trainer():
                 outputs = self.model(images)
 
                 loss = self.loss_fn(outputs, labels)
-        
                 total_loss += loss.item()
 
                 predictions = torch.argmax(outputs, dim=1)
-
                 correct_preds += torch.sum(predictions == labels).item()
                 total_preds += labels.shape[0]
 
