@@ -20,32 +20,28 @@ LABELS_MAPPING = {
 }
 
 data_root_path = r"C:\Users\razva\Master1\Thesis"
-output_path = r"C:\Users\razva\Master1\Thesis\Data\ADNI_preprocessed"
+output_path = r"C:\Users\razva\Master1\Thesis\data\adni_preprocessed_v3"
 csv_files = ["train_data.csv", "val_data.csv"]
-space_dim = [32, 32, 24]
-time_dim = 70
-output_df = {
-    "img_path": [],
-    "label": [],
-    "gender": [],
-    "age": []
-}
+space_dim = [64, 64, 48]
+time_dim = 140
 
 for csv_file in csv_files:
+    output_df = {
+        "img_path": [],
+        "label": []
+    }
+
     csv_data = pd.read_csv(os.path.join(data_root_path, csv_file))
     csv_data = csv_data.fillna("")
     csv_data = csv_data[csv_data["File Path"] != ""]
     csv_data = csv_data[csv_data["Group"] != "Patient"]
 
     data = {"scans": [], "labels": []}
-    other_data = {
-        "gender": csv_data["Sex"].to_list(),
-        "age": csv_data["Age"].to_list()
-    }
 
     image_label_pairs = list(zip(csv_data["File Path"].to_list(), csv_data["Group"].to_list()))
     split = "train" if "train" in csv_file else "val"
-    os.makedirs(os.path.join(output_path, split), exist_ok=True)
+    split_dir = os.path.join(output_path, f"{split}_img")
+    os.makedirs(split_dir, exist_ok=True)
     desc = f"Load {split} data"
     idx = 0
 
@@ -73,19 +69,17 @@ for csv_file in csv_files:
 
             final_img = nib.Nifti1Image(img.astype(np.int16), nib_obj.affine)
 
-            img_path = os.path.join(output_path, split, nifti_name)
+            img_path = os.path.join(split_dir, nifti_name)
             nib.save(final_img, img_path)
-            output_df["img_path"].append(img_path)
+            output_df["img_path"].append(nifti_name)
 
             label = LABELS_MAPPING[label]
             output_df["label"].append(label)
-            output_df["gender"].append(other_data["gender"])
-            output_df["age"].append(other_data["age"])
             idx += 1
         except Exception as ex:
             print(ex, nifti_file)
     
-    pd.DataFrame(output_df).to_csv(os.path.join(data_root_path, f"{split}_data_preprocessed.csv"))
+    pd.DataFrame(output_df).to_csv(os.path.join(output_path, f"{split}_annot.csv"))
 
         
 
