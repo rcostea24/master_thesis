@@ -19,11 +19,11 @@ LABELS_MAPPING = {
     'AD': 5, # Alzheimer's Dementia
 }
 
-data_root_path = r"C:\Users\razva\Master1\Thesis"
-output_path = r"C:\Users\razva\Master1\Thesis\data\adni_preprocessed_v3"
+data_root_path = r"C:\Users\razva\Master\Thesis"
+output_path = r"C:\Users\razva\Master\Thesis\data\adni_preprocessed_v3"
 csv_files = ["train_data.csv", "val_data.csv"]
-space_dim = [64, 64, 48]
-time_dim = 140
+space_dim = [32, 32, 24]
+time_dim = 70
 
 for csv_file in csv_files:
     output_df = {
@@ -52,7 +52,7 @@ for csv_file in csv_files:
             img = nib_obj.get_fdata().astype(np.int16)
 
             if len(img.shape) < 4:
-                img = np.expand_dims(img, axis=3)
+                continue
 
             zoom_factor = (space_dim[0] / img.shape[0], space_dim[1] / img.shape[1], space_dim[2] / img.shape[2], 1)
 
