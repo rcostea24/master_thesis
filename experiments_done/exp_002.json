@@ -1,0 +1,21 @@
+{
+    "exp_id": "002",
+    "device": "cuda",
+    "data_path": "data/adni_preprocessed_v4",
+    "septr_channels": 70,
+    "septr_input_size": [8, 48],
+    "septr_num_classes": 4,
+    "batch_size": 32,
+    "lr": 1e-3,
+    "epochs": 50,
+    "optimizer": "Adam",
+    "loss_fn": "CrossEntropyLoss",
+    "labels_mapping": {
+        "CN": 0, 
+        "SMC": 1, 
+        "MCI": 2, 
+        "LMCI": 2, 
+        "EMCI": 2, 
+        "AD": 3
+    }
+} 

@@ -3,6 +3,7 @@
 .jpeg
 .nii
 .mp4
+.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

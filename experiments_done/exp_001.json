@@ -1,7 +1,7 @@
 {
     "exp_id": "001",
     "device": "cuda",
-    "data_path": "data/adni_preprocessed_v1",
+    "data_path": "data/adni_preprocessed_v4",
     "septr_channels": 70,
     "septr_input_size": [8, 48],
     "septr_num_classes": 6,
