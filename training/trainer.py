@@ -40,7 +40,8 @@ class Trainer():
         self.optimizer = optimizer_obj(self.model.parameters(), lr=self.cfg["lr"])
 
         loss_obj = getattr(nn, self.cfg["loss_fn"])
-        self.loss_fn = loss_obj()
+        class_weights = torch.tensor(self.cfg["class_weights"])
+        self.loss_fn = loss_obj(weights=class_weights)
         
         self.accuracy = torchmetrics.Accuracy(
             task="multiclass",
