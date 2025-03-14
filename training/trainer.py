@@ -19,12 +19,12 @@ class Trainer():
         self.val_loader = val_loader
 
         self.model = None
-        self.best_acc = 0.0
+        self.best_score = 0.0
 
         self.train_losses = []
-        self.train_accs = []
+        self.train_scores = []
         self.val_losses = []
-        self.val_accs = []
+        self.val_scores = []
 
     def train(self):
         
@@ -74,22 +74,34 @@ class Trainer():
         for epoch in range(self.cfg["epochs"]):
             self.logger.log(f"epoch: {epoch+1}")
 
-            train_step_loss, train_step_acc = self.train_step()
-            self.logger.log(f"train_step_loss: {train_step_loss} | train_step_acc = {train_step_acc}")
+            train_step_output = self.train_step()
+            logging_string = f"train_step_loss: {train_step_output["train_step_loss"]} \n "
+            logging_string += f"train_step_accuracy = {train_step_output["train_step_accuracy"]} \n "
+            logging_string += f"train_step_precision = {train_step_output["train_step_precision"]} \n "
+            logging_string += f"train_step_recall = {train_step_output["train_step_recall"]} \n "
+            logging_string += f"train_step_f1_score = {train_step_output["train_step_f1_score"]} \n "
+            logging_string += f"train_step_balanced_accuracy = {train_step_output["train_step_balanced_accuracy"]} \n "
+            self.logger.log(logging_string)
             
-            val_step_loss, val_step_acc = self.val_step()
-            self.logger.log(f"val_step_loss: {val_step_loss} | val_step_acc = {val_step_acc}")
+            val_step_output = self.val_step()
+            logging_string = f"val_step_loss: {val_step_output["val_step_loss"]} \n "
+            logging_string += f"val_step_accuracy = {val_step_output["val_step_accuracy"]} \n "
+            logging_string += f"val_step_precision = {val_step_output["val_step_precision"]} \n "
+            logging_string += f"val_step_recall = {val_step_output["val_step_recall"]} \n "
+            logging_string += f"val_step_f1_score = {val_step_output["val_step_f1_score"]} \n "
+            logging_string += f"val_step_balanced_accuracy = {val_step_output["val_step_balanced_accuracy"]} \n "
+            self.logger.log(logging_string)
 
-            self.train_losses.append(train_step_loss)
-            self.train_accs.append(train_step_acc)
-            self.val_losses.append(val_step_loss)
-            self.val_accs.append(val_step_acc)
+            self.train_losses.append(train_step_output["train_step_loss"])
+            self.train_scores.append(train_step_output["train_step_f1_score"])
+            self.val_losses.append(val_step_output["val_step_loss"])
+            self.val_scores.append(val_step_output["val_step_f1_score"])
 
-            if val_step_acc > self.best_acc:
-                self.best_acc = val_step_acc
+            if val_step_output["val_step_f1_score"] > self.best_score:
+                self.best_score = val_step_output["val_step_f1_score"]
                 torch.save(self.model.state_dict(), f"saved_models/best_model_{self.cfg['exp_id']}.pt")
                 self.logger.log("New model saved")
-                self.save_confusion_matrix()
+                self.save_confusion_matrix(val_step_output["confusion_matrix"])
             
             torch.save(self.model.state_dict(), f"saved_models/last_model_{self.cfg['exp_id']}.pt")
 
@@ -98,7 +110,6 @@ class Trainer():
     def train_step(self):
         self.model.train()
         total_loss = 0.0
-        
 
         for images, labels in tqdm(self.train_loader):
             images, labels = images.to(self.device), labels.to(self.device)
@@ -125,8 +136,8 @@ class Trainer():
         train_step_acc = self.accuracy.compute().item()
         train_step_precision = self.precision.compute().item()
         train_step_recall = self.recall.compute().item()
-        train_step_f1 = self.f1_score.compute().item()
-        train_step_balanced_acc = self.balanced_accuracy.compute().item()
+        train_step_f1_score = self.f1_score.compute().item()
+        train_step_balanced_accuracy = self.balanced_accuracy.compute().item()
 
         self.accuracy.reset()
         self.precision.reset()
@@ -139,8 +150,8 @@ class Trainer():
             "train_step_acc": train_step_acc,
             "train_step_precision": train_step_precision,
             "train_step_recall": train_step_recall,
-            "train_step_f1": train_step_f1,
-            "train_step_balanced_acc": train_step_balanced_acc,
+            "train_step_f1_score": train_step_f1_score,
+            "train_step_balanced_accuracy": train_step_balanced_accuracy,
         }
 
         return train_step_output
@@ -148,8 +159,9 @@ class Trainer():
     def val_step(self):
         self.model.eval()
         total_loss = 0.0
-        correct_preds = 0.0
-        total_preds = 0
+
+        all_labels = []
+        all_predictions = []
 
         with torch.no_grad():
             for images, labels in tqdm(self.val_loader):
@@ -161,42 +173,52 @@ class Trainer():
                 total_loss += loss.item()
 
                 predictions = torch.argmax(outputs, dim=1)
-                correct_preds += torch.sum(predictions == labels).item()
-                total_preds += labels.shape[0]
 
-        val_step_loss = total_loss / len(self.val_loader)
-        val_step_acc = correct_preds / total_preds
-
-        return val_step_loss, val_step_acc
-    
-    def save_confusion_matrix(self):
-        if not os.path.exists("figures"):
-            os.makedirs("figures")
-            
-        best_model_path = f"saved_models/best_model_{self.cfg['exp_id']}.pt"
-        self.model.load_state_dict(torch.load(best_model_path, weights_only=True))
-        self.model.eval()
-        
-        all_labels = []
-        all_predictions = []
-        
-        with torch.no_grad():
-            for images, labels in tqdm(self.val_loader):
-                images, labels = images.to(self.device), labels.to(self.device)
-                outputs = self.model(images)
-                predictions = torch.argmax(outputs, dim=1)
-                
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predictions.cpu().numpy())
+                matrix = confusion_matrix(all_labels, all_predictions)
+                
+                self.accuracy.update(predictions, labels)
+                self.precision.update(predictions, labels)
+                self.recall.update(predictions, labels)
+                self.f1_score.update(predictions, labels)
+                self.balanced_accuracy.update(predictions, labels)
+
+        val_step_loss = total_loss / len(self.val_loader)
+        val_step_acc = self.accuracy.compute().item()
+        val_step_precision = self.precision.compute().item()
+        val_step_recall = self.recall.compute().item()
+        val_step_f1 = self.f1_score.compute().item()
+        val_step_balanced_acc = self.balanced_accuracy.compute().item()
+
+        self.accuracy.reset()
+        self.precision.reset()
+        self.recall.reset()
+        self.f1_score.reset()
+        self.balanced_accuracy.reset()
         
-        cm = confusion_matrix(all_labels, all_predictions)
+        val_step_output = {
+            "val_step_loss": val_step_loss,
+            "val_step_acc": val_step_acc,
+            "val_step_precision": val_step_precision,
+            "val_step_recall": val_step_recall,
+            "val_step_f1": val_step_f1,
+            "val_step_balanced_acc": val_step_balanced_acc,
+            "matrix": matrix
+        }
+
+        return val_step_output
+    
+    def save_confusion_matrix(self, matrix):
+        if not os.path.exists("figures"):
+            os.makedirs("figures")
         
         plt.figure(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+        sns.heatmap(matrix, annot=True, fmt='d', cmap='Blues')
         plt.xlabel("Predicted Label")
         plt.ylabel("True Label")
         plt.title("Confusion Matrix")
-        plt.savefig(f"figures/{self.cfg['exp_id']}_confusion_matrix.jpg")
+        plt.savefig(f"figures/confusion_matrix_{self.cfg['exp_id']}.jpg")
         plt.close()
         
         self.logger.log("Confusion matrix saved")
@@ -209,11 +231,11 @@ class Trainer():
         plt.plot(range(self.cfg["epochs"]), self.val_losses, label="val loss")
         plt.legend()
         plt.title("Loss")
-        plt.savefig(f"figures/{self.cfg['exp_id']}_loss.jpg")
+        plt.savefig(f"figures/loss_{self.cfg['exp_id']}.jpg")
         plt.close()
         
-        plt.plot(range(self.cfg["epochs"]), self.train_accs, label="train acc")
-        plt.plot(range(self.cfg["epochs"]), self.val_accs, label="val acc")
-        plt.title("Accuracy")
-        plt.savefig(f"figures/{self.cfg['exp_id']}_accuracy.jpg")
+        plt.plot(range(self.cfg["epochs"]), self.train_scores, label="train scores")
+        plt.plot(range(self.cfg["epochs"]), self.val_scores, label="val scores")
+        plt.title("F1 Score")
+        plt.savefig(f"figures/f1_score_{self.cfg['exp_id']}.jpg")
         plt.close()
