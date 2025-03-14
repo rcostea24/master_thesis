@@ -28,42 +28,40 @@ class Trainer():
 
     def train(self):
         
-        assert self.cfg["septr_num_classes"] == np.max(self.cfg["labels_mapping"].values())+1
+        assert self.cfg["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
 
         self.model = Model(
             self.cfg["septr_channels"],
             self.cfg["septr_input_size"],
-            self.cfg["septr_num_classes"]
+            self.cfg["num_classes"]
         ).to(self.device)
         
         optimizer_obj = getattr(torch.optim, self.cfg["optimizer"])
         self.optimizer = optimizer_obj(self.model.parameters(), lr=self.cfg["lr"])
 
         loss_obj = getattr(nn, self.cfg["loss_fn"])
-        class_weights = torch.tensor(self.cfg["class_weights"])
-        self.loss_fn = loss_obj(weights=class_weights)
+        class_weights = torch.tensor(self.cfg["class_weights"]).to(self.device)
+        self.loss_fn = loss_obj(weight=class_weights)
         
         self.accuracy = torchmetrics.Accuracy(
             task="multiclass",
-            num_classes=self.cfg["septr_num_classes"]
+            num_classes=self.cfg["num_classes"],
+            average="macro"
         ).to(self.device)
         
         self.precision = torchmetrics.Precision(
             task="multiclass",
-            num_classes=self.cfg["num_classes"]
+            num_classes=self.cfg["num_classes"],
+            average="macro"
         ).to(self.device)
         
         self.recall = torchmetrics.Recall(
             task="multiclass",
-            num_classes=self.cfg["num_classes"]
+            num_classes=self.cfg["num_classes"],
+            average="macro"
         ).to(self.device)
         
         self.f1_score = torchmetrics.F1Score(
-            task="multiclass",
-            num_classes=self.cfg["num_classes"]
-        ).to(self.device)
-        
-        self.balanced_accuracy = torchmetrics.classification.Accuracy(
             task="multiclass",
             num_classes=self.cfg["num_classes"],
             average="macro"
@@ -76,33 +74,31 @@ class Trainer():
             self.logger.log(f"epoch: {epoch+1}")
 
             train_step_output = self.train_step()
-            logging_string = f"train_step_loss: {train_step_output["train_step_loss"]} \n "
-            logging_string += f"train_step_accuracy = {train_step_output["train_step_accuracy"]} \n "
-            logging_string += f"train_step_precision = {train_step_output["train_step_precision"]} \n "
-            logging_string += f"train_step_recall = {train_step_output["train_step_recall"]} \n "
-            logging_string += f"train_step_f1_score = {train_step_output["train_step_f1_score"]} \n "
-            logging_string += f"train_step_balanced_accuracy = {train_step_output["train_step_balanced_accuracy"]} \n "
+            logging_string = f"train_step_loss: {train_step_output["loss"]} \n "
+            logging_string += f"train_step_accuracy = {train_step_output["accuracy"]} \n "
+            logging_string += f"train_step_precision = {train_step_output["precision"]} \n "
+            logging_string += f"train_step_recall = {train_step_output["recall"]} \n "
+            logging_string += f"train_step_f1_score = {train_step_output["f1_score"]} \n "
             self.logger.log(logging_string)
             
             val_step_output = self.val_step()
-            logging_string = f"val_step_loss: {val_step_output["val_step_loss"]} \n "
-            logging_string += f"val_step_accuracy = {val_step_output["val_step_accuracy"]} \n "
-            logging_string += f"val_step_precision = {val_step_output["val_step_precision"]} \n "
-            logging_string += f"val_step_recall = {val_step_output["val_step_recall"]} \n "
-            logging_string += f"val_step_f1_score = {val_step_output["val_step_f1_score"]} \n "
-            logging_string += f"val_step_balanced_accuracy = {val_step_output["val_step_balanced_accuracy"]} \n "
+            logging_string = f"val_step_loss: {val_step_output["loss"]} \n "
+            logging_string += f"val_step_accuracy = {val_step_output["accuracy"]} \n "
+            logging_string += f"val_step_precision = {val_step_output["precision"]} \n "
+            logging_string += f"val_step_recall = {val_step_output["recall"]} \n "
+            logging_string += f"val_step_f1_score = {val_step_output["f1_score"]} \n "
             self.logger.log(logging_string)
 
-            self.train_losses.append(train_step_output["train_step_loss"])
-            self.train_scores.append(train_step_output["train_step_f1_score"])
-            self.val_losses.append(val_step_output["val_step_loss"])
-            self.val_scores.append(val_step_output["val_step_f1_score"])
+            self.train_losses.append(train_step_output["loss"])
+            self.train_scores.append(train_step_output["f1_score"])
+            self.val_losses.append(val_step_output["loss"])
+            self.val_scores.append(val_step_output["f1_score"])
 
-            if val_step_output["val_step_f1_score"] > self.best_score:
-                self.best_score = val_step_output["val_step_f1_score"]
+            if val_step_output["f1_score"] > self.best_score:
+                self.best_score = val_step_output["f1_score"]
                 torch.save(self.model.state_dict(), f"saved_models/best_model_{self.cfg['exp_id']}.pt")
                 self.logger.log("New model saved")
-                self.save_confusion_matrix(val_step_output["confusion_matrix"])
+                self.save_confusion_matrix(val_step_output["matrix"])
             
             torch.save(self.model.state_dict(), f"saved_models/last_model_{self.cfg['exp_id']}.pt")
 
@@ -110,10 +106,24 @@ class Trainer():
 
     def train_step(self):
         self.model.train()
-        total_loss = 0.0
+        
+        num_batches = 0
+        train_step_output = {
+            "loss": 0.0,
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0
+        }
+        
+        for metric in train_step_output:
+            if metric != "loss":
+                metric_obj = getattr(self, metric)
+                metric_obj.reset()
 
         for images, labels in tqdm(self.train_loader):
             images, labels = images.to(self.device), labels.to(self.device)
+            num_batches += 1
 
             self.optimizer.zero_grad()
             
@@ -121,39 +131,24 @@ class Trainer():
             
             loss = self.loss_fn(outputs, labels)
             loss.backward()
-            total_loss += loss.item()
 
             self.optimizer.step()
 
             predictions = torch.argmax(outputs, dim=1)
 
-            self.accuracy.update(predictions, labels)
-            self.precision.update(predictions, labels)
-            self.recall.update(predictions, labels)
-            self.f1_score.update(predictions, labels)
-            self.balanced_accuracy.update(predictions, labels)
-
-        train_step_loss = total_loss / len(self.train_loader)
-        train_step_acc = self.accuracy.compute().item()
-        train_step_precision = self.precision.compute().item()
-        train_step_recall = self.recall.compute().item()
-        train_step_f1_score = self.f1_score.compute().item()
-        train_step_balanced_accuracy = self.balanced_accuracy.compute().item()
-
-        self.accuracy.reset()
-        self.precision.reset()
-        self.recall.reset()
-        self.f1_score.reset()
-        self.balanced_accuracy.reset()
-        
-        train_step_output = {
-            "train_step_loss": train_step_loss,
-            "train_step_acc": train_step_acc,
-            "train_step_precision": train_step_precision,
-            "train_step_recall": train_step_recall,
-            "train_step_f1_score": train_step_f1_score,
-            "train_step_balanced_accuracy": train_step_balanced_accuracy,
-        }
+            for metric in train_step_output:
+                if metric != "loss":
+                    metric_obj = getattr(self, metric)
+                    metric_obj.update(predictions, labels)
+                else:
+                    train_step_output[metric] += loss.item()
+                    
+        for metric in train_step_output:
+            if metric != "loss":
+                metric_obj = getattr(self, metric)
+                train_step_output[metric] = metric_obj.compute().item()
+            else:
+                train_step_output[metric] /= num_batches
 
         return train_step_output
 
@@ -163,10 +158,26 @@ class Trainer():
 
         all_labels = []
         all_predictions = []
+        
+        num_batches = 0
+        val_step_output = {
+            "loss": 0.0,
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0,
+            "matrix": None
+        }
+        
+        for metric in val_step_output:
+            if metric not in ["loss", "matrix"]:
+                metric_obj = getattr(self, metric)
+                metric_obj.reset()
 
         with torch.no_grad():
             for images, labels in tqdm(self.val_loader):
                 images, labels = images.to(self.device), labels.to(self.device)
+                num_batches += 1
 
                 outputs = self.model(images)
 
@@ -177,36 +188,22 @@ class Trainer():
 
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predictions.cpu().numpy())
-                matrix = confusion_matrix(all_labels, all_predictions)
                 
-                self.accuracy.update(predictions, labels)
-                self.precision.update(predictions, labels)
-                self.recall.update(predictions, labels)
-                self.f1_score.update(predictions, labels)
-                self.balanced_accuracy.update(predictions, labels)
+                for metric in val_step_output:
+                    if metric not in ["loss", "matrix"]:
+                        metric_obj = getattr(self, metric)
+                        metric_obj.update(predictions, labels)
+                    elif metric == "loss":
+                        val_step_output[metric] += loss.item()
 
-        val_step_loss = total_loss / len(self.val_loader)
-        val_step_acc = self.accuracy.compute().item()
-        val_step_precision = self.precision.compute().item()
-        val_step_recall = self.recall.compute().item()
-        val_step_f1 = self.f1_score.compute().item()
-        val_step_balanced_acc = self.balanced_accuracy.compute().item()
-
-        self.accuracy.reset()
-        self.precision.reset()
-        self.recall.reset()
-        self.f1_score.reset()
-        self.balanced_accuracy.reset()
-        
-        val_step_output = {
-            "val_step_loss": val_step_loss,
-            "val_step_acc": val_step_acc,
-            "val_step_precision": val_step_precision,
-            "val_step_recall": val_step_recall,
-            "val_step_f1": val_step_f1,
-            "val_step_balanced_acc": val_step_balanced_acc,
-            "matrix": matrix
-        }
+        for metric in val_step_output:
+            if metric not in ["loss", "matrix"]:
+                metric_obj = getattr(self, metric)
+                val_step_output[metric] = metric_obj.compute().item()
+            elif metric == "loss":
+                val_step_output[metric] /= num_batches
+                
+        val_step_output["matrix"] = confusion_matrix(all_labels, all_predictions)
 
         return val_step_output
     

@@ -4,7 +4,7 @@
     "data_path": "data/adni_preprocessed_v4",
     "septr_channels": 70,
     "septr_input_size": [8, 48],
-    "septr_num_classes": 3,
+    "num_classes": 3,
     "batch_size": 32,
     "lr": 1e-3,
     "epochs": 50,

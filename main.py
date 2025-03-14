@@ -11,9 +11,14 @@ EXPERIMENTS_ROOT = r"experiments"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_root_path", default="/home/razvan")
+    parser.add_argument("--exp_id", default=None)
     args = parser.parse_args()
 
-    exp_cfgs = sorted(os.listdir(EXPERIMENTS_ROOT))
+    if args.exp_id is None:
+        exp_cfgs = sorted(os.listdir(EXPERIMENTS_ROOT))
+    else:
+        exp_cfgs = [f"exp_{str(args.exp_id).zfill(3)}.json"]
+        
     print(exp_cfgs)
     for cfg_file_name in exp_cfgs:
         cfg_path = os.path.join(EXPERIMENTS_ROOT, cfg_file_name)
