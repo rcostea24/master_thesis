@@ -29,7 +29,7 @@ if __name__ == "__main__":
         train_dataloader, val_dataloader = load_data(cfg, args.data_root_path)
 
         if not os.path.exists("logs"):
-            os.makedirs("logs")
+            os.makedirs("logs", exist_ok=True)
 
         logger = Logger(f"logs/log_{cfg['exp_id']}.txt")
 

@@ -68,7 +68,7 @@ class Trainer():
         ).to(self.device)
 
         if not os.path.exists("saved_models"):
-            os.makedirs("saved_models")
+            os.makedirs("saved_models", exist_ok=True)
         
         for epoch in range(self.cfg["epochs"]):
             self.logger.log(f"epoch: {epoch+1}")
@@ -209,7 +209,7 @@ class Trainer():
     
     def save_confusion_matrix(self, matrix):
         if not os.path.exists("figures"):
-            os.makedirs("figures")
+            os.makedirs("figures", exist_ok=True)
         
         plt.figure(figsize=(8, 6))
         sns.heatmap(matrix, annot=True, fmt='d', cmap='Blues')
@@ -223,7 +223,7 @@ class Trainer():
 
     def plot(self):
         if not os.path.exists("figures"):
-            os.makedirs("figures")
+            os.makedirs("figures",  exist_ok=True)
 
         plt.plot(range(self.cfg["epochs"]), self.train_losses, label="train loss")
         plt.plot(range(self.cfg["epochs"]), self.val_losses, label="val loss")

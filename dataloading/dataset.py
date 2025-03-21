@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import nibabel as nib
 import numpy as np
 import pandas as pd
@@ -15,13 +16,15 @@ def load_data(cfg, data_root_path):
     train_dataset = NiftiDataset(
         data_path,
         "train",
-        cfg["labels_mapping"]
+        cfg["labels_mapping"],
+        cfg["exp_id"]
     )
 
     val_dataset = NiftiDataset(
         data_path,
         "val",
-        cfg["labels_mapping"]
+        cfg["labels_mapping"],
+        cfg["exp_id"]
     )
 
     train_dataloader = DataLoader(train_dataset, batch_size=cfg["batch_size"], shuffle=True)
@@ -30,10 +33,13 @@ def load_data(cfg, data_root_path):
     return train_dataloader, val_dataloader
 
 class NiftiDataset(Dataset):
-    def __init__(self, data_path, split, label_mapping):
+    def __init__(self, data_path, split, label_mapping, exp_id):
         csv_data = pd.read_csv(os.path.join(data_path, f"{split}_annot.csv"))
         classes_to_remove = [k for k,v in label_mapping.items() if v == -1]
         csv_data = csv_data[~csv_data["label"].isin(classes_to_remove)]
+        
+        if not os.path.exists("figures"):
+            os.makedirs("figures", exist_ok=True)
 
         self.data = {"scans": [], "labels": []}
         
@@ -47,6 +53,14 @@ class NiftiDataset(Dataset):
             img = nib_obj.get_fdata().astype(np.float32)
             self.data["scans"].append(img)
             self.data["labels"].append(int(label_mapping[label]))
+            
+        plt.figure(figsize=(8, 6))
+        plt.hist(self.data["labels"])
+        plt.xlabel("Classes")
+        plt.ylabel("Counts")
+        plt.title("Distribution of data")
+        plt.savefig(f"figures/data_distribution_{split}_{exp_id}.jpg")
+        plt.close()
 
     def __len__(self):
         return len(self.data["scans"])
