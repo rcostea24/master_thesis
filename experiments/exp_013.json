@@ -1,9 +1,17 @@
 {
-    "exp_id": "012",
+    "exp_id": "013",
     "device": "cuda",
     "data_path": "data/adni_preprocessed_v4",
-    "septr_channels": 70,
-    "septr_input_size": [8, 48],
+    "resnet_params": {
+        "layers": [2, 2, 2, 2]
+    },
+    "transformer_params": {
+        "in_features": 512,
+        "num_heads_per_layer": 4, 
+        "num_layers": 1, 
+        "layer_params": {}
+    },
+    "fc_size": [512, 3],
     "num_classes": 3,
     "batch_size": 32,
     "epochs": 50,
@@ -17,14 +25,14 @@
     "scheduler": {
         "name": "ExponentialLR",
         "parameters": {
-            "gamma": 0.95
+            "gamma": 1.0
         },
         "step": 5
     },
     "loss_fn": {
         "name": "CrossEntropyLoss",
         "parameters": {
-            "weight": [0.65967855, 0.83762201, 3.44525547]
+            "weight": [1.0, 1.0, 1.0]
         }
     },
     "metrics": [
