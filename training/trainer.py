@@ -36,71 +36,63 @@ class Trainer():
             self.cfg["num_classes"]
         ).to(self.device)
         
-        optimizer_obj = getattr(torch.optim, self.cfg["optimizer"])
-        self.optimizer = optimizer_obj(self.model.parameters(), lr=self.cfg["lr"])
+        optimizer_obj = getattr(torch.optim, self.cfg["optimizer"]["name"])
+        self.optimizer = optimizer_obj(self.model.parameters(), **self.cfg["optimizer"]["parameters"])
+        
+        scheduler_obj = getattr(torch.optim.lr_scheduler, self.cfg["scheduler"]["name"])
+        self.scheduler = scheduler_obj(self.optimizer, **self.cfg["scheduler"]["parameters"])
 
-        loss_obj = getattr(nn, self.cfg["loss_fn"])
-        class_weights = torch.tensor(self.cfg["class_weights"]).to(self.device)
-        self.loss_fn = loss_obj(weight=class_weights)
+        loss_obj = getattr(nn, self.cfg["loss_fn"]["name"])
+        if "weight" in self.cfg["loss_fn"]["parameters"]:
+            weight = self.cfg["loss_fn"]["parameters"]["weight"]
+            weight = torch.tensor(weight).to(self.device)
+            self.cfg["loss_fn"]["parameters"]["weight"] = weight
+        self.loss_fn = loss_obj(**self.cfg["loss_fn"]["parameters"])
         
-        self.accuracy = torchmetrics.Accuracy(
-            task="multiclass",
-            num_classes=self.cfg["num_classes"],
-            average="macro"
-        ).to(self.device)
-        
-        self.precision = torchmetrics.Precision(
-            task="multiclass",
-            num_classes=self.cfg["num_classes"],
-            average="macro"
-        ).to(self.device)
-        
-        self.recall = torchmetrics.Recall(
-            task="multiclass",
-            num_classes=self.cfg["num_classes"],
-            average="macro"
-        ).to(self.device)
-        
-        self.f1_score = torchmetrics.F1Score(
-            task="multiclass",
-            num_classes=self.cfg["num_classes"],
-            average="macro"
-        ).to(self.device)
+        self.metrics = []
+        for metric in self.cfg["metrics"]:
+            metric_obj = getattr(torchmetrics, metric)
+            metric_instance = metric_obj(
+                task="multiclass",
+                num_classes=self.cfg["num_classes"],
+                average="macro"
+            ).to(self.device)
+            self.metrics.append(metric_instance)
 
         if not os.path.exists("saved_models"):
             os.makedirs("saved_models", exist_ok=True)
         
-        for epoch in range(self.cfg["epochs"]):
-            self.logger.log(f"epoch: {epoch+1}")
+        for epoch in range(1, self.cfg["epochs"]+1):
+            self.logger.log(f"epoch: {epoch}")
 
             train_step_output = self.train_step()
-            logging_string = f"train_step_loss: {train_step_output["loss"]} \n "
-            logging_string += f"train_step_accuracy = {train_step_output["accuracy"]} \n "
-            logging_string += f"train_step_precision = {train_step_output["precision"]} \n "
-            logging_string += f"train_step_recall = {train_step_output["recall"]} \n "
-            logging_string += f"train_step_f1_score = {train_step_output["f1_score"]} \n "
+            logging_string = ""
+            for metric, value in train_step_output.items():
+                logging_string += f"\ntrain_step_{metric}: {value}"
             self.logger.log(logging_string)
             
             val_step_output = self.val_step()
-            logging_string = f"val_step_loss: {val_step_output["loss"]} \n "
-            logging_string += f"val_step_accuracy = {val_step_output["accuracy"]} \n "
-            logging_string += f"val_step_precision = {val_step_output["precision"]} \n "
-            logging_string += f"val_step_recall = {val_step_output["recall"]} \n "
-            logging_string += f"val_step_f1_score = {val_step_output["f1_score"]} \n "
+            logging_string = ""
+            for metric, value in val_step_output.items():
+                if metric == "matrix":
+                    continue
+                logging_string += f"\nval_step_{metric}: {value}"
             self.logger.log(logging_string)
 
             self.train_losses.append(train_step_output["loss"])
-            self.train_scores.append(train_step_output["f1_score"])
+            self.train_scores.append(train_step_output["MulticlassF1Score"])
             self.val_losses.append(val_step_output["loss"])
-            self.val_scores.append(val_step_output["f1_score"])
+            self.val_scores.append(val_step_output["MulticlassF1Score"])
 
-            if val_step_output["f1_score"] > self.best_score:
-                self.best_score = val_step_output["f1_score"]
+            if val_step_output["MulticlassF1Score"] > self.best_score:
+                self.best_score = val_step_output["MulticlassF1Score"]
                 torch.save(self.model.state_dict(), f"saved_models/best_model_{self.cfg['exp_id']}.pt")
                 self.logger.log("New model saved")
                 self.save_confusion_matrix(val_step_output["matrix"])
             
             torch.save(self.model.state_dict(), f"saved_models/last_model_{self.cfg['exp_id']}.pt")
+            if epoch % self.cfg["scheduler"]["step"] == 0:
+                self.scheduler.step()
 
         self.plot()
 
@@ -109,17 +101,13 @@ class Trainer():
         
         num_batches = 0
         train_step_output = {
-            "loss": 0.0,
-            "accuracy": 0.0,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1_score": 0.0
+            "loss": 0.0
         }
         
-        for metric in train_step_output:
-            if metric != "loss":
-                metric_obj = getattr(self, metric)
-                metric_obj.reset()
+        for metric in self.metrics:
+            metric.reset()
+            metric_name = metric.__class__.__name__
+            train_step_output[metric_name] = 0.0
 
         for images, labels in tqdm(self.train_loader):
             images, labels = images.to(self.device), labels.to(self.device)
@@ -130,31 +118,25 @@ class Trainer():
             outputs = self.model(images)
             
             loss = self.loss_fn(outputs, labels)
+            train_step_output["loss"] += loss.item()
             loss.backward()
 
             self.optimizer.step()
 
             predictions = torch.argmax(outputs, dim=1)
 
-            for metric in train_step_output:
-                if metric != "loss":
-                    metric_obj = getattr(self, metric)
-                    metric_obj.update(predictions, labels)
-                else:
-                    train_step_output[metric] += loss.item()
+            for metric in self.metrics:
+                metric.update(predictions, labels)
                     
-        for metric in train_step_output:
-            if metric != "loss":
-                metric_obj = getattr(self, metric)
-                train_step_output[metric] = metric_obj.compute().item()
-            else:
-                train_step_output[metric] /= num_batches
-
+        train_step_output["loss"] /= num_batches     
+        for metric in self.metrics:
+            metric_name = metric.__class__.__name__
+            train_step_output[metric_name] = metric.compute().item()
+                
         return train_step_output
 
     def val_step(self):
         self.model.eval()
-        total_loss = 0.0
 
         all_labels = []
         all_predictions = []
@@ -162,17 +144,13 @@ class Trainer():
         num_batches = 0
         val_step_output = {
             "loss": 0.0,
-            "accuracy": 0.0,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1_score": 0.0,
             "matrix": None
         }
         
-        for metric in val_step_output:
-            if metric not in ["loss", "matrix"]:
-                metric_obj = getattr(self, metric)
-                metric_obj.reset()
+        for metric in self.metrics:
+            metric.reset()
+            metric_name = metric.__class__.__name__
+            val_step_output[metric_name] = 0.0
 
         with torch.no_grad():
             for images, labels in tqdm(self.val_loader):
@@ -182,27 +160,20 @@ class Trainer():
                 outputs = self.model(images)
 
                 loss = self.loss_fn(outputs, labels)
-                total_loss += loss.item()
+                val_step_output["loss"] += loss.item()
 
                 predictions = torch.argmax(outputs, dim=1)
 
                 all_labels.extend(labels.cpu().numpy())
                 all_predictions.extend(predictions.cpu().numpy())
                 
-                for metric in val_step_output:
-                    if metric not in ["loss", "matrix"]:
-                        metric_obj = getattr(self, metric)
-                        metric_obj.update(predictions, labels)
-                    elif metric == "loss":
-                        val_step_output[metric] += loss.item()
+                for metric in self.metrics:
+                    metric.update(predictions, labels)
 
-        for metric in val_step_output:
-            if metric not in ["loss", "matrix"]:
-                metric_obj = getattr(self, metric)
-                val_step_output[metric] = metric_obj.compute().item()
-            elif metric == "loss":
-                val_step_output[metric] /= num_batches
-                
+        val_step_output["loss"] /= num_batches
+        for metric in self.metrics:
+            metric_name = metric.__class__.__name__
+            val_step_output[metric_name] = metric.compute().item()
         val_step_output["matrix"] = confusion_matrix(all_labels, all_predictions)
 
         return val_step_output
