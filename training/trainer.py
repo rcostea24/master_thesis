@@ -10,6 +10,8 @@ from sklearn.metrics import confusion_matrix
 import torchmetrics
 import seaborn as sns
 
+# from models.BrainModel import BrainModel
+
 class Trainer():
     def __init__(self, cfg, logger, train_loader, val_loader):
         self.cfg = cfg
@@ -20,6 +22,7 @@ class Trainer():
 
         self.model = None
         self.best_score = 0.0
+        self.best_loss = np.inf
 
         self.train_losses = []
         self.train_scores = []
@@ -28,13 +31,19 @@ class Trainer():
 
     def train(self):
         
-        assert self.cfg["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
+        assert self.cfg["septr_params"]["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
 
         self.model = Model(
-            self.cfg["septr_channels"],
-            self.cfg["septr_input_size"],
-            self.cfg["num_classes"]
+            self.cfg["septr_params"]
         ).to(self.device)
+        
+        # self.model = Model(
+        #     self.cfg["resnet_params"],
+        #     self.cfg["transformer_params"]
+        # ).to(self.device)
+        
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        self.logger.log(f"Total trainable params: {trainable_params}")
         
         optimizer_obj = getattr(torch.optim, self.cfg["optimizer"]["name"])
         self.optimizer = optimizer_obj(self.model.parameters(), **self.cfg["optimizer"]["parameters"])
@@ -54,7 +63,7 @@ class Trainer():
             metric_obj = getattr(torchmetrics, metric)
             metric_instance = metric_obj(
                 task="multiclass",
-                num_classes=self.cfg["num_classes"],
+                num_classes=self.cfg["septr_params"]["num_classes"],
                 average="macro"
             ).to(self.device)
             self.metrics.append(metric_instance)
@@ -87,7 +96,7 @@ class Trainer():
             if val_step_output["MulticlassF1Score"] > self.best_score:
                 self.best_score = val_step_output["MulticlassF1Score"]
                 torch.save(self.model.state_dict(), f"saved_models/best_model_{self.cfg['exp_id']}.pt")
-                self.logger.log("New model saved")
+                self.logger.log("New model saved f1score")
                 self.save_confusion_matrix(val_step_output["matrix"])
             
             torch.save(self.model.state_dict(), f"saved_models/last_model_{self.cfg['exp_id']}.pt")

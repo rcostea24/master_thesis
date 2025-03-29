@@ -14,8 +14,8 @@ def normalize_frame(frame):
     return frame.astype(np.uint8)
 
 # Load the image
-path = "/home/razvan/data/adni_preprocessed_v3/train_img"
-dest_folder = "/home/razvan/data/movies"
+path = "/home/razvan/data/adni_preprocessed_v4/val_img"
+dest_folder = "/home/razvan/data/movies_v4/val"
 files = os.listdir(path)
 for file in files:
     file_dest_folder = os.path.join(dest_folder, file)
@@ -32,8 +32,10 @@ for file in files:
     os.makedirs(file_dest_folder, exist_ok=True)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    idx = np.arange(z_dim)
+    idx = [12]
 
-    for slice_index in range(z_dim):
+    for slice_index in idx:
         video_path = os.path.join(file_dest_folder, f"slice_{slice_index}.mp4")
         out = cv2.VideoWriter(video_path, fourcc, 10, (frame_size, frame_size), isColor=True)
 

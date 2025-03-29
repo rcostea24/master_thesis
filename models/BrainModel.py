@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch import nn
 
-from ResNet3D import ResNet3D
-from Transformer import Transformer
+from models.ResNet3D import ResNet3D
+from models.Transformer import Transformer
 
 class Model(nn.Module):
     def __init__(self, resnet_params, transformer_params):

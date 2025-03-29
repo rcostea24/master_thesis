@@ -5,18 +5,13 @@ from conv_network_3d.conv_net import ConvNetwork
 from septr.septr import SeparableTr
 
 class Model(nn.Module):
-    def __init__(self, septr_channels, septr_input_size, septr_num_classes):
+    def __init__(self, septr_params):
         super(Model, self).__init__()
-
+        septr_params["input_size"] = tuple(septr_params["input_size"])
         self.conv_network = ConvNetwork()
-        self.transformer = SeparableTr(
-            channels=septr_channels,
-            input_size=tuple(septr_input_size),
-            num_classes=septr_num_classes
-        )
+        self.transformer = SeparableTr(**septr_params)
 
     def forward(self, x):
-        x = torch.permute(x, (0, 4, 1, 2, 3))
         time_stamps = np.arange(x.shape[1])
         downsampled_volumes = []
         for time_stamp in time_stamps:

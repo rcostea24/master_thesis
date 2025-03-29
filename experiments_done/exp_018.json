@@ -1,0 +1,60 @@
+{
+    "exp_id": "018",
+    "device": "cuda",
+    "data_path": "data/adni_preprocessed_v4",
+    "septr_params": {
+        "channels": 70,
+        "input_size": [8, 48], 
+        "num_classes": 3, 
+        "depth": 3, 
+        "heads": 5, 
+        "mlp_dim": 256, 
+        "dim_head": 256, 
+        "dim": 256,
+        "dropout_tr": 0.5
+    },
+    "batch_size": 32,
+    "epochs": 150,
+    "optimizer": {
+        "name": "Adam",
+        "parameters": {
+            "lr": 1e-4,
+            "amsgrad": false
+        }
+    },
+    "scheduler": {
+        "name": "ExponentialLR",
+        "parameters": {
+            "gamma": 1.0
+        },
+        "step": 15
+    },
+    "loss_fn": {
+        "name": "CrossEntropyLoss",
+        "parameters": {
+            "weight": [0.83762201, 0.65967855, 3.44525547]
+        }
+    },
+    "metrics": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1Score"
+    ],
+    "labels_mapping": {
+        "CN": 0, 
+        "SMC": -1, 
+        "MCI": 1, 
+        "LMCI": 1, 
+        "EMCI": 1, 
+        "AD": 2
+    },
+    "augmentations": {
+        "spatial": {
+    
+        },
+        "temporal": {
+
+        }
+    }
+} 
