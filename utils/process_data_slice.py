@@ -22,8 +22,16 @@ LABELS_MAPPING = {
 data_root_path = r"C:\Users\razva\Master\Thesis"
 output_path = r"C:\Users\razva\Master\Thesis\data\adni_preprocessed_v5"
 csv_files = ["train_data.csv", "val_data.csv"]
-space_dim = [32, 32, 24]
+space_dim = [64, 64]
 time_dim = 70
+data_type = np.float32
+
+def normalize_volume(volume):
+    mean = np.mean(volume)
+    std = np.std(volume)
+    if std == 0:
+        return volume - mean  # Avoid division by zero if std is zero
+    return (volume - mean) / std
 
 for csv_file in csv_files:
     output_df = {
@@ -49,15 +57,10 @@ for csv_file in csv_files:
         try:
             nib_obj = nib.load(os.path.join(data_root_path, nifti_file))
             nifti_name = os.path.basename(nifti_file)
-            img = nib_obj.get_fdata().astype(np.int16)
-
-            if "Resting_State_fMRI" in nifti_file:
-                img = (img / 1000).astype(np.int16)
+            img = nib_obj.get_fdata().astype(data_type)
 
             if len(img.shape) < 4:
                 continue
-
-            zoom_factor = (space_dim[0] / img.shape[0], space_dim[1] / img.shape[1], space_dim[2] / img.shape[2], 1)
 
             crt_space_dim = list(img.shape[:3])
             crt_time_dim = img.shape[-1]
@@ -68,9 +71,15 @@ for csv_file in csv_files:
                 padded_img = np.zeros(shape=(crt_space_dim + [time_dim - crt_time_dim]))
                 img = np.concatenate([img, padded_img], axis=3)
 
+            slice_index = img.shape[2] // 2
+
+            img = img[:, :, slice_index, :]
+            # img = normalize_volume(img)
+
+            zoom_factor = (space_dim[0] / img.shape[0], space_dim[1] / img.shape[1], 1)
             img = scipy.ndimage.zoom(img, zoom_factor)
 
-            final_img = nib.Nifti1Image(img.astype(np.int16), nib_obj.affine)
+            final_img = nib.Nifti1Image(img.astype(data_type), nib_obj.affine)
 
             img_path = os.path.join(split_dir, nifti_name)
             nib.save(final_img, img_path)

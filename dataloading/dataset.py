@@ -46,7 +46,7 @@ class NiftiDataset(Dataset):
                 transforms_list.append(tio_obj(**params))
             self.spatial_transforms = mt.Compose(transforms_list)
         
-        image_paths = csv_data["img_path"].to_list()
+        image_paths = csv_data["img_path"].to_list()[:5]
         labels = csv_data["label"].to_list()
         image_label_pairs = list(zip(image_paths, labels))
         desc = f"Load {split} data"

@@ -37,8 +37,8 @@ def resize(img):
     return img
 
 # Load the image
-path = r"C:\Users\razva\Master\Thesis\data\adni_preprocessed_v4\train_img"
-dest_folder = r"C:\Users\razva\Master\Thesis\movies"
+path = r"C:\Users\razva\Master\Thesis\data\adni_preprocessed_v5\train_img"
+dest_folder = r"C:\Users\razva\Master\Thesis\movies_v5"
 files = os.listdir(path)
 for file in files:
     if not file.endswith("nii.gz"):

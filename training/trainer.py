@@ -3,14 +3,13 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from model import Model
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import torchmetrics
 import seaborn as sns
 
-# from models.BrainModel import BrainModel
+import importlib
 
 class Trainer():
     def __init__(self, cfg, logger, train_loader, val_loader):
@@ -31,16 +30,15 @@ class Trainer():
 
     def train(self):
         
-        assert self.cfg["septr_params"]["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
+        assert self.cfg["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
 
-        self.model = Model(
-            self.cfg["septr_params"]
-        ).to(self.device)
+        model_name = self.cfg["model_name"]
+        model_class = importlib.import_module(f"models.{model_name}.{model_name}")
         
-        # self.model = Model(
-        #     self.cfg["resnet_params"],
-        #     self.cfg["transformer_params"]
-        # ).to(self.device)
+        self.model = model_class(
+            self.cfg[f"params_{model_name}"],
+            self.cfg["num_classes"]
+        )
         
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         self.logger.log(f"Total trainable params: {trainable_params}")

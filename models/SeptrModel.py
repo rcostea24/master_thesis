@@ -4,9 +4,9 @@ from torch import nn
 from conv_network_3d.conv_net import ConvNetwork
 from septr.septr import SeparableTr
 
-class Model(nn.Module):
+class SeptrModel(nn.Module):
     def __init__(self, septr_params):
-        super(Model, self).__init__()
+        super(SeptrModel, self).__init__()
         septr_params["input_size"] = tuple(septr_params["input_size"])
         self.conv_network = ConvNetwork()
         self.transformer = SeparableTr(**septr_params)
@@ -29,6 +29,6 @@ class Model(nn.Module):
     
 if __name__ == "__main__":
     x = torch.rand([32, 32, 32, 24, 70]).to("cuda")
-    model = Model(70, (8, 48), 6).to("cuda")
+    model = SeptrModel(70, (8, 48), 6).to("cuda")
     y = model(x)
     print(y.shape)
