@@ -1,15 +1,15 @@
 import numpy as np
 import torch
 from torch import nn
-from conv_network_3d.conv_net import ConvNetwork
+from models.SeptrConvNet import ConvNetwork
 from septr.septr import SeparableTr
 
 class SeptrModel(nn.Module):
-    def __init__(self, septr_params):
+    def __init__(self, septr_params, num_classes):
         super(SeptrModel, self).__init__()
         septr_params["input_size"] = tuple(septr_params["input_size"])
         self.conv_network = ConvNetwork()
-        self.transformer = SeparableTr(**septr_params)
+        self.transformer = SeparableTr(num_classes=num_classes, **septr_params)
 
     def forward(self, x):
         time_stamps = np.arange(x.shape[1])
@@ -24,7 +24,7 @@ class SeptrModel(nn.Module):
             downsampled_volumes.append(volume_out)
 
         downsampled_volumes = torch.stack(downsampled_volumes, dim=1)
-        out = self.transformer(downsampled_volumes)
+        out, _ = self.transformer(downsampled_volumes)
         return out
     
 if __name__ == "__main__":

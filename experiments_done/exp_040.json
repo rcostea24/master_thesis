@@ -1,18 +1,27 @@
 {
-    "exp_id": "033",
+    "exp_id": "040",
     "device": "cuda",
     "data_path": "data/adni_preprocessed_v4",
-    "model_name": "FullConvNet",
-    "params_FullConvNet": {
-        "layers": [2, 2, 2, 2]
+    "model_name": "SpatialTemporalModel",
+    "params_SpatialTemporalModel": {
+        "spatial_model": {
+            "layers": [2, 2, 2, 2]
+        },
+        "temporal_model": {
+            "input_dim": 512,
+            "hidden_dim": 128,
+            "bidirectional": false,
+            "attention": false
+        }
     },
     "num_classes": 3,
     "batch_size": 32,
     "epochs": 150,
+    "oversampling": false,
     "optimizer": {
         "name": "Adam",
         "parameters": {
-            "lr": 2e-5,
+            "lr": 2e-4,
             "amsgrad": false
         }
     },
@@ -21,7 +30,7 @@
         "parameters": {
             "gamma": 1.0
         },
-        "step": 15
+        "step": 25
     },
     "loss_fn": {
         "name": "CrossEntropyLoss",

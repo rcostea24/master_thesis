@@ -7,7 +7,7 @@ import os
 import monai.transforms as mt
 import torch
 from torchvision import transforms as T
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from tqdm import tqdm
 
 def load_data(cfg, data_root_path):
@@ -22,9 +22,19 @@ def load_data(cfg, data_root_path):
             cfg["augmentations"]["spatial"]
         )
         
-        shuffle = True if split == "train" else False
-        dataloaders[split] = DataLoader(dataset, batch_size=cfg["batch_size"], shuffle=shuffle)
-        
+        if split == "train" and cfg["oversampling"]:
+            labels = np.array(dataset.data["labels"])
+            class_sample_count = np.array(
+                [len(np.where(labels == label)[0]) for label in np.unique(labels)]
+            )
+            weight = 1. / class_sample_count
+            samples_weight = np.array([weight[t] for t in labels])
+            sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
+            dataloaders[split] = DataLoader(dataset, batch_size=cfg["batch_size"], sampler=sampler)
+        else:
+            shuffle = True if split == "train" else False
+            dataloaders[split] = DataLoader(dataset, batch_size=cfg["batch_size"], shuffle=shuffle)
+            
     return dataloaders["train"], dataloaders["val"]
 
 class NiftiDataset(Dataset):
@@ -46,7 +56,7 @@ class NiftiDataset(Dataset):
                 transforms_list.append(tio_obj(**params))
             self.spatial_transforms = mt.Compose(transforms_list)
         
-        image_paths = csv_data["img_path"].to_list()[:5]
+        image_paths = csv_data["img_path"].to_list()
         labels = csv_data["label"].to_list()
         image_label_pairs = list(zip(image_paths, labels))
         desc = f"Load {split} data"

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class BasicBlock3D(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, downsample=None):
+    def __init__(self, in_channels, out_channels, stride=1, downsample=None, dropout=False, dropout_prob=0.0):
         super(BasicBlock3D, self).__init__()
         
         self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
@@ -12,8 +12,10 @@ class BasicBlock3D(nn.Module):
         
         self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
         self.bn2 = nn.BatchNorm3d(out_channels)
+        self.dropout3d = nn.Dropout3d(dropout_prob)
         
         self.downsample = downsample
+        self.dropout = dropout
     
     def forward(self, x):
         identity = x
@@ -21,6 +23,8 @@ class BasicBlock3D(nn.Module):
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
+        if self.dropout:
+            out = self.dropout3d(out)
         
         out = self.conv2(out)
         out = self.bn2(out)
@@ -30,11 +34,13 @@ class BasicBlock3D(nn.Module):
         
         out += identity
         out = self.relu(out)
+        if self.dropout:
+            out = self.dropout3d(out)
         
         return out
 
 class ResNet3D(nn.Module):
-    def __init__(self, layers):
+    def __init__(self, layers, dropout=False, dropout_prob=0.0):
         super(ResNet3D, self).__init__()
         
         self.in_channels = 64
@@ -46,15 +52,15 @@ class ResNet3D(nn.Module):
         self.maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
         
         # Layers of residual blocks
-        self.layer1 = self._make_layer(64, layers[0])
-        self.layer2 = self._make_layer(128, layers[1], stride=2)
-        self.layer3 = self._make_layer(256, layers[2], stride=2)
-        self.layer4 = self._make_layer(512, layers[3], stride=2)
+        self.layer1 = self._make_layer(64, layers[0], 1, dropout, dropout_prob)
+        self.layer2 = self._make_layer(128, layers[1], 2, dropout, dropout_prob)
+        self.layer3 = self._make_layer(256, layers[2], 2, dropout, dropout_prob)
+        self.layer4 = self._make_layer(512, layers[3], 2, dropout, dropout_prob)
         
         # Fully connected layer
         self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
     
-    def _make_layer(self, out_channels, blocks, stride=1):
+    def _make_layer(self, out_channels, blocks, stride=1, dropout=False, dropout_prob=0.0):
         downsample = None
         if stride != 1 or self.in_channels != out_channels:
             downsample = nn.Sequential(
@@ -63,11 +69,11 @@ class ResNet3D(nn.Module):
             )
         
         layers = []
-        layers.append(BasicBlock3D(self.in_channels, out_channels, stride, downsample))
+        layers.append(BasicBlock3D(self.in_channels, out_channels, stride, downsample, dropout, dropout_prob))
         self.in_channels = out_channels
         
         for _ in range(1, blocks):
-            layers.append(BasicBlock3D(self.in_channels, out_channels))
+            layers.append(BasicBlock3D(self.in_channels, out_channels, dropout=dropout, dropout_prob=dropout_prob))
         
         return nn.Sequential(*layers)
     

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from ResNet3D import ResNet3D
+from models.ResNet3D import ResNet3D
 
 class FullConvNet(nn.Module):
     def __init__(self, resnet_params, num_classes):
@@ -12,6 +12,7 @@ class FullConvNet(nn.Module):
         self.classifier = nn.Linear(512, num_classes)
 
     def forward(self, x):
+        x = x.mean(dim=1, keepdim=True)
         features = self.resnet3d(x)
         out = self.classifier(features)
         return out

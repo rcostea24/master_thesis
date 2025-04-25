@@ -33,12 +33,13 @@ class Trainer():
         assert self.cfg["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
 
         model_name = self.cfg["model_name"]
-        model_class = importlib.import_module(f"models.{model_name}.{model_name}")
+        module = importlib.import_module(f"models.{model_name}")
+        model_class = getattr(module, model_name)
         
         self.model = model_class(
             self.cfg[f"params_{model_name}"],
             self.cfg["num_classes"]
-        )
+        ).to(self.device)
         
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         self.logger.log(f"Total trainable params: {trainable_params}")
@@ -61,7 +62,7 @@ class Trainer():
             metric_obj = getattr(torchmetrics, metric)
             metric_instance = metric_obj(
                 task="multiclass",
-                num_classes=self.cfg["septr_params"]["num_classes"],
+                num_classes=self.cfg["num_classes"],
                 average="macro"
             ).to(self.device)
             self.metrics.append(metric_instance)

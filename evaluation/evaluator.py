@@ -1,3 +1,4 @@
+import importlib
 import os
 import numpy as np
 import pandas as pd
@@ -25,10 +26,15 @@ class Evaluator():
 
     def evaluate(self):
         
-        assert self.cfg["septr_params"]["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
+        assert self.cfg["num_classes"] == max(list(self.cfg["labels_mapping"].values()))+1
 
-        self.model = Model(
-            self.cfg["septr_params"]
+        model_name = self.cfg["model_name"]
+        module = importlib.import_module(f"models.{model_name}")
+        model_class = getattr(module, model_name)
+        
+        self.model = model_class(
+            self.cfg[f"params_{model_name}"],
+            self.cfg["num_classes"]
         ).to(self.device)
         
         self.model.load_state_dict(torch.load(self.model_path))
@@ -38,13 +44,14 @@ class Evaluator():
         
         self.metrics = []
         for metric in self.cfg["metrics"]:
-            metric_obj = getattr(torchmetrics, metric)
-            metric_instance = metric_obj(
-                task="multiclass",
-                num_classes=self.cfg["septr_params"]["num_classes"],
-                average="macro"
-            ).to(self.device)
-            self.metrics.append(metric_instance)
+            for average in ["macro", "micro"]:
+                metric_obj = getattr(torchmetrics, metric)
+                metric_instance = metric_obj(
+                    task="multiclass",
+                    num_classes=self.cfg["num_classes"],
+                    average=average
+                ).to(self.device)
+                self.metrics.append(metric_instance)
         
         for split in ["train", "val"]:
             output = self.evaluate_step(split)
