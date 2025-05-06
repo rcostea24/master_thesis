@@ -1,5 +1,5 @@
 {
-    "exp_id": "037",
+    "exp_id": "032",
     "device": "cuda",
     "data_path": "data/adni_preprocessed_v4",
     "model_name": "SeptrModel",
@@ -11,16 +11,16 @@
         "mlp_dim": 256, 
         "dim_head": 256, 
         "dim": 256,
-        "dropout_tr": 0.5
+        "dropout_tr": 0.2
     },
-    "num_classes": 3,
+    "num_classes": 3, 
     "batch_size": 32,
     "epochs": 150,
-    "oversampling": true,
+    "oversampling": false,
     "optimizer": {
         "name": "Adam",
         "parameters": {
-            "lr": 1e-4,
+            "lr": 2e-5,
             "amsgrad": false
         }
     },
@@ -29,7 +29,7 @@
         "parameters": {
             "gamma": 1.0
         },
-        "step": 25
+        "step": 15
     },
     "loss_fn": {
         "name": "CrossEntropyLoss",

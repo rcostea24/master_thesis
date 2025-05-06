@@ -1,5 +1,5 @@
 {
-    "exp_id": "037",
+    "exp_id": "025",
     "device": "cuda",
     "data_path": "data/adni_preprocessed_v4",
     "model_name": "SeptrModel",
@@ -16,7 +16,7 @@
     "num_classes": 3,
     "batch_size": 32,
     "epochs": 150,
-    "oversampling": true,
+    "oversampling": false,
     "optimizer": {
         "name": "Adam",
         "parameters": {

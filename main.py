@@ -10,7 +10,7 @@ from training.trainer import Trainer
 class ExperimentRoot():
     def __init__(self):
         self.train = "experiments"
-        self.evaluate = "experiments_done"
+        self.evaluate = "experiments_eval"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -49,6 +49,5 @@ if __name__ == "__main__":
             trainer = Trainer(cfg, logger, train_dataloader, val_dataloader)
             trainer.train()
         elif args.mode == "evaluate":
-            for which_model in ["last", "best"]:
-                evaluator = Evaluator(cfg, logger, train_dataloader, val_dataloader, which_model)
-                evaluator.evaluate()
+            evaluator = Evaluator(cfg, logger, train_dataloader, val_dataloader)
+            evaluator.evaluate()

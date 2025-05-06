@@ -1,22 +1,24 @@
 {
-    "exp_id": "037",
+    "exp_id": "036",
     "device": "cuda",
     "data_path": "data/adni_preprocessed_v4",
-    "model_name": "SeptrModel",
-    "params_SeptrModel": {
-        "channels": 70,
-        "input_size": [8, 48], 
-        "depth": 3, 
-        "heads": 5, 
-        "mlp_dim": 256, 
-        "dim_head": 256, 
-        "dim": 256,
-        "dropout_tr": 0.5
+    "model_name": "SeptrInParallel",
+    "params_SeptrInParallel": {
+        "input_dims": [8, 8, 6],
+        "septr_params": {
+            "channels": 70,
+            "depth": 1, 
+            "heads": 5, 
+            "mlp_dim": 256, 
+            "dim_head": 256, 
+            "dim": 256,
+            "dropout_tr": 0.5
+        }
     },
-    "num_classes": 3,
+    "num_classes": 3, 
     "batch_size": 32,
     "epochs": 150,
-    "oversampling": true,
+    "oversampling": false,
     "optimizer": {
         "name": "Adam",
         "parameters": {

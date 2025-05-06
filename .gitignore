@@ -8,6 +8,7 @@
 saved_models/
 logs/
 figures/
+figures_eval/
 
 
 # Byte-compiled / optimized / DLL files

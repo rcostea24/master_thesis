@@ -1,26 +1,27 @@
 {
-    "exp_id": "037",
+    "exp_id": "049",
     "device": "cuda",
     "data_path": "data/adni_preprocessed_v4",
-    "model_name": "SeptrModel",
-    "params_SeptrModel": {
-        "channels": 70,
-        "input_size": [8, 48], 
-        "depth": 3, 
-        "heads": 5, 
-        "mlp_dim": 256, 
-        "dim_head": 256, 
-        "dim": 256,
-        "dropout_tr": 0.5
+    "model_name": "SpatialTemporalModel",
+    "params_SpatialTemporalModel": {
+        "spatial_model": {
+            "layers": [2, 2, 2, 2]
+        },
+        "temporal_model": {
+            "input_dim": 512,
+            "hidden_dim": 128,
+            "bidirectional": false,
+            "attention": false
+        }
     },
     "num_classes": 3,
     "batch_size": 32,
     "epochs": 150,
-    "oversampling": true,
+    "oversampling": false,
     "optimizer": {
-        "name": "Adam",
+        "name": "AdamW",
         "parameters": {
-            "lr": 1e-4,
+            "lr": 2e-4,
             "amsgrad": false
         }
     },
