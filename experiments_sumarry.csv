@@ -1,0 +1,13 @@
+exp_id,desc
+25,septr
+32,septr lower lr
+33,full conv net
+36,septr in parallel
+37,septr with oversampling
+40,cnn+rnn network
+41,cnn+rnn bidirectional
+46,cnn+rnn dropout 0.5
+47,cnn+rnn with oversampling
+48,cnn+rnn with amsgrad
+49,cnn+rnn with weight decay default
+51,cnn+rnn with weight decay 1e-2
