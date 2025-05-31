@@ -1,0 +1,44 @@
+{
+    "exp_id": "014",
+    "device": "cuda",
+    "data_path": "data/adni_preprocessed_v4",
+    "septr_channels": 70,
+    "septr_input_size": [8, 48],
+    "num_classes": 2,
+    "batch_size": 32,
+    "epochs": 50,
+    "optimizer": {
+        "name": "Adam",
+        "parameters": {
+            "lr": 1e-3,
+            "amsgrad": false
+        }
+    },
+    "scheduler": {
+        "name": "ExponentialLR",
+        "parameters": {
+            "gamma": 1.0
+        },
+        "step": 15
+    },
+    "loss_fn": {
+        "name": "CrossEntropyLoss",
+        "parameters": {
+            "weight": [1.0, 1.0]
+        }
+    },
+    "metrics": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1Score"
+    ],
+    "labels_mapping": {
+        "CN": 0, 
+        "SMC": -1, 
+        "MCI": 1, 
+        "LMCI": 1, 
+        "EMCI": 1, 
+        "AD": -1
+    }
+} 

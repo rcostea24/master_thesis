@@ -1,0 +1,64 @@
+{
+    "exp_id": "051",
+    "device": "cuda",
+    "data_path": "data/adni_preprocessed_v4",
+    "model_name": "SpatialTemporalModel",
+    "params_SpatialTemporalModel": {
+        "spatial_model": {
+            "layers": [2, 2, 2, 2]
+        },
+        "temporal_model": {
+            "input_dim": 512,
+            "hidden_dim": 128,
+            "bidirectional": false,
+            "attention": false
+        }
+    },
+    "num_classes": 3,
+    "batch_size": 32,
+    "epochs": 150,
+    "oversampling": false,
+    "optimizer": {
+        "name": "AdamW",
+        "parameters": {
+            "lr": 2e-4,
+            "amsgrad": false,
+            "weight_decay": 1e-2
+        }
+    },
+    "scheduler": {
+        "name": "ExponentialLR",
+        "parameters": {
+            "gamma": 1.0
+        },
+        "step": 25
+    },
+    "loss_fn": {
+        "name": "CrossEntropyLoss",
+        "parameters": {
+            "weight": [0.83762201, 0.65967855, 3.44525547]
+        }
+    },
+    "metrics": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1Score"
+    ],
+    "labels_mapping": {
+        "CN": 0, 
+        "SMC": -1, 
+        "MCI": 1, 
+        "LMCI": 1, 
+        "EMCI": 1, 
+        "AD": 2
+    },
+    "augmentations": {
+        "spatial": {
+    
+        },
+        "temporal": {
+
+        }
+    }
+} 
